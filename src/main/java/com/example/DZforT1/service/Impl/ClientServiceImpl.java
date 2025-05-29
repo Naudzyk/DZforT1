@@ -12,7 +12,6 @@ import com.example.DZforT1.repository.ClientRepository;
 import com.example.DZforT1.service.ClientService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.hibernate.mapping.Collection;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -37,7 +36,6 @@ public class ClientServiceImpl implements ClientService {
         client.setFirstName(dto.firstName());
         client.setLastName(dto.lastName());
         client.setMiddleName(dto.middleName());
-        client.setClientId(UUID.randomUUID());
 
         Client saved = clientRepository.save(client);
 
@@ -63,8 +61,6 @@ public class ClientServiceImpl implements ClientService {
     @Override
     @Transactional
     @LogDataSourceError
-    @Metric
-    @Cached
     public ClientResponseDTO getClientById(Long id) {
         Client client = clientRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Client not found"));
@@ -73,7 +69,6 @@ public class ClientServiceImpl implements ClientService {
 
     @Override
     @Transactional
-    @Metric
     public List<ClientResponseDTO> getAllClients() {
         return clientRepository.findAll().stream()
                 .map(this::convertToClientResponseDTO)
@@ -102,8 +97,7 @@ public class ClientServiceImpl implements ClientService {
             client.getFirstName(),
             client.getLastName(),
             client.getMiddleName(),
-            accountDTOS,
-            client.getClientId()
+            accountDTOS
         );
     }
 
