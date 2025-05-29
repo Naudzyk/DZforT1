@@ -3,11 +3,12 @@ package com.example.DZforT1.service.Impl;
 import com.example.DZforT1.DTO.AccountResponseDTO;
 import com.example.DZforT1.DTO.ClientCreateDTO;
 import com.example.DZforT1.DTO.ClientResponseDTO;
-import com.example.DZforT1.aop.CachedAOP.Cached;
+
 import com.example.DZforT1.aop.LogDataSourceAOP.LogDataSourceError;
 import com.example.DZforT1.aop.MetricAOP.Metric;
 import com.example.DZforT1.models.Account;
 import com.example.DZforT1.models.Client;
+
 import com.example.DZforT1.repository.ClientRepository;
 import com.example.DZforT1.service.ClientService;
 import jakarta.transaction.Transactional;
@@ -36,6 +37,7 @@ public class ClientServiceImpl implements ClientService {
         client.setFirstName(dto.firstName());
         client.setLastName(dto.lastName());
         client.setMiddleName(dto.middleName());
+        client.setClientId(UUID.randomUUID());
 
         Client saved = clientRepository.save(client);
 
@@ -97,7 +99,8 @@ public class ClientServiceImpl implements ClientService {
             client.getFirstName(),
             client.getLastName(),
             client.getMiddleName(),
-            accountDTOS
+            accountDTOS,
+            client.getClientId()
         );
     }
 
