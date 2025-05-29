@@ -29,6 +29,9 @@ public class Client {
     @Column(name = "middle_name")
     private String middleName;
 
+    @Column(name = "client_Id")
+    private UUID clientId;
+
     @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Account> accounts = new ArrayList<>();
 
