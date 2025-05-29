@@ -4,7 +4,9 @@ import com.example.DZforT1.DTO.AccountResponseDTO;
 import com.example.DZforT1.DTO.ClientCreateDTO;
 import com.example.DZforT1.DTO.ClientResponseDTO;
 
+import com.example.DZforT1.aop.CachedAOP.Cached;
 import com.example.DZforT1.aop.LogDataSourceAOP.LogDataSourceError;
+import com.example.DZforT1.aop.MetricAOP.Metric;
 import com.example.DZforT1.models.Account;
 import com.example.DZforT1.models.Client;
 
@@ -62,6 +64,8 @@ public class ClientServiceImpl implements ClientService {
     @Override
     @Transactional
     @LogDataSourceError
+    @Cached
+    @Metric
     public ClientResponseDTO getClientById(Long id) {
         Client client = clientRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Client not found"));
@@ -70,6 +74,7 @@ public class ClientServiceImpl implements ClientService {
 
     @Override
     @Transactional
+    @Metric
     public List<ClientResponseDTO> getAllClients() {
         return clientRepository.findAll().stream()
                 .map(this::convertToClientResponseDTO)
