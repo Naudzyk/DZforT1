@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -44,7 +45,8 @@ public class DataGenerator implements CommandLineRunner {
                     Client client = new Client();
                     client.setFirstName(faker.name().firstName());
                     client.setLastName(faker.name().lastName());
-                    client.setMiddleName(faker.name().firstName() ); // Отчество
+                    client.setMiddleName(faker.name().firstName() );
+                    client.setClientId(UUID.randomUUID());
                     return client;
                 })
                 .toList();
