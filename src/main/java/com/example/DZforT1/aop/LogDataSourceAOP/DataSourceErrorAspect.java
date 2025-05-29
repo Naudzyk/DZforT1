@@ -1,4 +1,4 @@
-package com.example.DZforT1.aop;
+package com.example.DZforT1.aop.LogDataSourceAOP;
 
 import com.example.DZforT1.models.DataSourceErrorLog;
 
@@ -15,8 +15,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
