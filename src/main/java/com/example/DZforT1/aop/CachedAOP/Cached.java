@@ -1,4 +1,5 @@
-package com.example.DZforT1.aop;
+package com.example.DZforT1.aop.CachedAOP;
+
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -7,5 +8,5 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface LogDataSourceError {
+public @interface Cached {
 }

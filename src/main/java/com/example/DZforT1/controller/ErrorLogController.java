@@ -2,6 +2,7 @@ package com.example.DZforT1.controller;
 
 import com.example.DZforT1.models.DataSourceErrorLog;
 import com.example.DZforT1.repository.DataSourceErrorLogRepository;
+import com.example.DZforT1.service.DataSourceErrorLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,10 +15,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ErrorLogController {
 
-    private final DataSourceErrorLogRepository repository;
+    private final DataSourceErrorLogService dataSourceErrorLogService;
 
     @GetMapping
     public List<DataSourceErrorLog> getAllErrors() {
-        return repository.findAll();
+        return dataSourceErrorLogService.getAllErrors();
     }
 }

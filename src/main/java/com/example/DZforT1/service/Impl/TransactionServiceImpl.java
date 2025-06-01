@@ -2,7 +2,9 @@ package com.example.DZforT1.service.Impl;
 
 import com.example.DZforT1.DTO.TransactionCreateDTO;
 import com.example.DZforT1.DTO.TransactionResponseDTO;
-import com.example.DZforT1.aop.LogDataSourceError;
+import com.example.DZforT1.aop.CachedAOP.Cached;
+import com.example.DZforT1.aop.LogDataSourceAOP.LogDataSourceError;
+import com.example.DZforT1.aop.MetricAOP.Metric;
 import com.example.DZforT1.models.Account;
 import com.example.DZforT1.models.Transaction;
 import com.example.DZforT1.repository.AccountRepository;
@@ -27,6 +29,7 @@ public class TransactionServiceImpl implements TransactionService {
      */
     @Override
     @Transactional
+    @Metric
     public List<TransactionResponseDTO> getTransactions() {
         return transactionRepository.findAll().stream()
                 .map(this::convertToDto)
@@ -39,6 +42,8 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     @LogDataSourceError
+    @Cached
+    @Metric
     public TransactionResponseDTO getTransaction(Long id) {
         Transaction transaction = transactionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + id));
