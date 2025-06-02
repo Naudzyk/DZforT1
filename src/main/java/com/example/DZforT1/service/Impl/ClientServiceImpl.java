@@ -4,6 +4,7 @@ import com.example.DZforT1.DTO.AccountResponseDTO;
 import com.example.DZforT1.DTO.ClientCreateDTO;
 import com.example.DZforT1.DTO.ClientResponseDTO;
 
+import com.example.DZforT1.aop.CachedAOP.Cached;
 import com.example.DZforT1.aop.LogDataSourceAOP.LogDataSourceError;
 import com.example.DZforT1.aop.MetricAOP.Metric;
 import com.example.DZforT1.models.Account;

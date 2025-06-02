@@ -8,8 +8,11 @@ import com.example.DZforT1.service.DataSourceErrorLogService;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 
 @Service
@@ -24,8 +27,14 @@ public class DataSourceErrorLogServiceImpl implements DataSourceErrorLogService 
     }
 
     @Override
-    @Transactional
-    public DataSourceErrorLog saveError(DataSourceErrorLog errorLog) {
-        return repository.save(errorLog);
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void saveError(DataSourceErrorLog errorLog) {
+        DataSourceErrorLog log = new DataSourceErrorLog();
+        log.setMethodSignature(errorLog.getMethodSignature());
+        log.setExceptionMessage(errorLog.getExceptionMessage());
+        log.setStackTrace(Arrays.toString(new String[]{errorLog.getStackTrace()}));
+        log.setTimestamp(LocalDateTime.now());
+
+        repository.save(log);
     }
 }

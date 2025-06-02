@@ -6,6 +6,9 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
 
 @Aspect
@@ -13,6 +16,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class MetricAspect {
 
+    private final KafkaTemplate<String, String> kafkaTemplate;
     private final TimeLimitExcedLogService timeLimitExcedLogService;
 
 
@@ -29,7 +33,15 @@ public class MetricAspect {
             long duration = System.currentTimeMillis() - start;
             if (duration > limitMillis) {
                 String methodName = joinPoint.getSignature().toShortString();
-                timeLimitExcedLogService.logExceedMethod(methodName, duration);
+                String formatl = String.format("Method: %s | Duration: %s", methodName, duration);
+
+                try {
+                    Message<String> message = MessageBuilder.withPayload(formatl).setHeader("error-type","METRICS").build();
+
+                    kafkaTemplate.send("t1_demo_metrics", message.getPayload());
+                }catch (Exception e){
+                    timeLimitExcedLogService.logExceedMethod(methodName, duration);
+                }
             }
         }
     }

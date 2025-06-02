@@ -5,6 +5,6 @@ import com.example.DZforT1.models.DataSourceErrorLog;
 import java.util.List;
 
 public interface DataSourceErrorLogService {
-        DataSourceErrorLog saveError(DataSourceErrorLog errorLog);
+        void saveError(DataSourceErrorLog errorLog);
         List<DataSourceErrorLog> getAllErrors();
 }

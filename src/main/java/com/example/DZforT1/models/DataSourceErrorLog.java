@@ -30,35 +30,4 @@ public class DataSourceErrorLog {
     private LocalDateTime timestamp;
 
 
-    public String getExceptionMessage() {
-        return exceptionMessage;
-    }
-
-    public void setExceptionMessage(String exceptionMessage) {
-        this.exceptionMessage = exceptionMessage;
-    }
-
-    public LocalDateTime getTimestamp() {
-        return timestamp;
-    }
-
-    public void setTimestamp(LocalDateTime timestamp) {
-        this.timestamp = timestamp;
-    }
-
-    public String getStackTrace() {
-        return stackTrace;
-    }
-
-    public void setStackTrace(String stackTrace) {
-        this.stackTrace = stackTrace;
-    }
-
-    public String getMethodSignature() {
-        return methodSignature;
-    }
-
-    public void setMethodSignature(String methodSignature) {
-        this.methodSignature = methodSignature;
-    }
 }

@@ -5,13 +5,16 @@ import com.example.DZforT1.models.DataSourceErrorLog;
 import com.example.DZforT1.service.DataSourceErrorLogService;
 
 
+import com.example.DZforT1.service.ErrorLoggingService;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.AfterThrowing;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
-
+import org.springframework.messaging.Message;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -25,7 +28,9 @@ import java.util.Arrays;
 @Component
 @RequiredArgsConstructor
 public class DataSourceErrorAspect {
-    private final DataSourceErrorLogService errorLogService;
+
+    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final ErrorLoggingService errorLoggingService;
 
 
     @Pointcut("@annotation(LogDataSourceError)")
@@ -36,22 +41,12 @@ public class DataSourceErrorAspect {
 
     @AfterThrowing(pointcut = "logDataSourceErrorMethods()", throwing = "ex")
     public void logError(JoinPoint joinPoint, Exception ex) {
-            TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
-            transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        try {
+           errorLoggingService.logError(joinPoint, ex);
+        }catch (Exception e) {
+            System.err.println("Ошибка при сохранении лога: " + e.getMessage());
+        }
 
-            transactionTemplate.execute(status -> {
-                try {
-                    DataSourceErrorLog log = new DataSourceErrorLog();
-                    log.setExceptionMessage(ex.getMessage());
-                    log.setStackTrace(ex.getStackTrace().length > 0 ? Arrays.toString(ex.getStackTrace()) : "No stack trace");
-                    log.setMethodSignature(joinPoint.getSignature().toShortString());
-                    log.setTimestamp(LocalDateTime.now());
-                    errorLogService.saveError(log);
-                } catch (Exception e) {
-                    System.err.println("Ошибка при сохранении лога: " + e.getMessage());
-                    status.setRollbackOnly();
-                }
-                return null;
-            });
+
         }
 }

@@ -27,7 +27,7 @@ public class CachedAspect {
     @Value("${app.cache.expiration-seconds}")
     private long expirationSeconds;
 
-    @Around("@annotation(com.example.DZforT1.aop.MetricAOP.Metric)")
+    @Around("@annotation(com.example.DZforT1.aop.CachedAOP.Cached)")
     public Object around(ProceedingJoinPoint joinPoint) throws Throwable {
 
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
