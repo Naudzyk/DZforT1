@@ -27,7 +27,7 @@ spring:
 
 
   kafka:
-    bootstrap-servers: localhost:9092,localhost:9093,localhost:9094
+    bootstrap-servers: localhost:9092
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -42,7 +42,13 @@ app:
   cache:
     expiration-seconds: 200
   metric:
-    limit-millis: 5
+    limit-millis: 500
   kafka:
     metric-topic: t1_demo_metrics
     error-topic: t1_demo_metrics
+
+logging:
+  level:
+    root: INFO
+    org.springframework.kafka: DEBUG
+    ваш.пакет: DEBUG

@@ -40,7 +40,7 @@ public class MetricLoggingServiceImpl implements MetricLoggingService {
 
             kafkaTemplate.send(metricTopic, message.getPayload());
         } catch (Exception e) {
-                timeLimitExceedLogService.logExceedMethod(metricName, duration);
+            timeLimitExceedLogService.logExceedMethod(metricName, duration);
         }
 
     }
