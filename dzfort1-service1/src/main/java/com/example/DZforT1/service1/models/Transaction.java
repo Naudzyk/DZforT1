@@ -17,9 +17,6 @@ import java.util.UUID;
 @Table(name = "transaction")
 public class Transaction {
 
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     @Id
     @Column(name = "transaction_id", unique = true, nullable = false)
     private UUID transactionId;
@@ -42,13 +39,24 @@ public class Transaction {
 
     @ManyToOne
     @OnDelete(action = OnDeleteAction.RESTRICT)
-    @JoinColumn(name = "account_id", referencedColumnName = "accountId", insertable = false, updatable = false)
+    @JoinColumn(name = "account_id", referencedColumnName = "account_id", insertable = false, updatable = false)
     private Account account;
 
     @PrePersist
     public void generateTransactionId() {
         if (this.transactionId == null) {
             this.transactionId = UUID.randomUUID();
+        }
+    }
+
+    public void setAccount(Account account) {
+        this.account = account;
+        if (account != null) {
+            this.accountId = account.getAccountId();
+            this.clientId = account.getClientId();
+        } else {
+            this.accountId = null;
+            this.clientId = null;
         }
     }
 }

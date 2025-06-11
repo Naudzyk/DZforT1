@@ -19,12 +19,13 @@ import java.util.UUID;
 @Table(name = "account")
 public class Account {
 
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
 
     @Id
     @Column(name = "account_id", nullable = false, unique = true)
     private UUID accountId;
+
+    @Column(name = "client_id", nullable = false, insertable = false, updatable = false)
+    private UUID clientId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "account_type", nullable = false)

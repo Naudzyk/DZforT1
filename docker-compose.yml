@@ -2,15 +2,18 @@ version: '3'
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:7.3.0
+    ports:
+      - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
 
   kafka:
     image: confluentinc/cp-kafka:7.3.0
     depends_on:
       - zookeeper
     ports:
-      - 9092:9092
+      - "9092:9092"
     environment:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -18,4 +21,18 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_DEFAULT_REPLICATION_FACTOR: 1
-      KAFKA_CREATE_TOPICS: "t1_demo_metrics:1:1"
+      KAFKA_CFG_PROCESS_RODINABLY: "true"
+      KAFKA_CFG_NUM_PARTITIONS: 1
+      KAFKA_CFG_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT"
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: PLAINTEXT
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+
+      # Создание топиков при старте
+      KAFKA_CREATE_TOPICS: |
+        t1_demo_transactions:1:1,
+        t1_demo_transaction_accept:1:1,
+        t1_demo_transaction_result:1:1,
+        t1_demo_metrics:1:1

@@ -2,10 +2,14 @@ package com.example.DZforT1.service1.controller;
 
 import com.example.DZforT1.core.DTO.TransactionCreateDTO;
 import com.example.DZforT1.core.DTO.TransactionResponseDTO;
+import com.example.DZforT1.service1.service.TransactionProcesingService;
 import com.example.DZforT1.service1.service.TransactionService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,16 +22,26 @@ public class TransactionController {
 
     private final TransactionService transactionService;
 
+    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final ObjectMapper objectMapper;
+
+    @Value("${app.kafka.transaction-topic}")
+    private String transactionTopic;
+
     /**
-     * Создает новую транзакцию на основе полученных данных.
-     *
-     * @param dto DTO-объект с данными для создания транзакции
-     * @return ResponseEntity с созданной транзакцией в формате DTO и статусом 201 (Created)
+     * Отправляет транзакцию в Kafka для асинхронной обработки
      */
     @PostMapping
-    public ResponseEntity<TransactionResponseDTO> createTransaction(@RequestBody TransactionCreateDTO dto) {
-        TransactionResponseDTO created = transactionService.addTransaction(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    public ResponseEntity<String> createTransaction(@RequestBody TransactionCreateDTO dto) {
+        try {
+            // Преобразуем DTO в JSON и отправляем в Kafka
+            String json = objectMapper.writeValueAsString(dto);
+            kafkaTemplate.send(transactionTopic, json);
+
+            return ResponseEntity.accepted().body("Транзакция принята на обработку");
+        } catch (Exception ex) {
+            return ResponseEntity.status(500).body("Ошибка отправки транзакции: " + ex.getMessage());
+        }
     }
 
     /**

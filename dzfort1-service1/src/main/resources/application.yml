@@ -1,54 +1,38 @@
 spring:
   application:
-    name: DZforT1
-
+    name: dzfort1-service1
   datasource:
     url: jdbc:h2:mem:testdb
-    driver-class-name: org.h2.Driver
     username: sa
     password:
-
+    driver-class-name: org.h2.Driver
   jpa:
     show-sql: true
-    hibernate:
-      ddl-auto: update
-    defer-datasource-initialization: true
+    properties:
+      hibernate:
+        type:
+          override:
+            frozen_amount: DECIMAL(19,2)
     open-in-view: false
-
-  sql:
-    init:
-      mode: always
-
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-
-
 
   kafka:
     bootstrap-servers: localhost:9092
+    consumer:
+      auto-offset-reset: earliest
+      enable-auto-commit: false
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
-    consumer:
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      enable-auto-commit: false
-      auto-offset-reset: earliest
-
 
 app:
+  kafka:
+    metric-topic: t1_demo_metrics
+    error-topic: t1_demo_transaction_errors
+    transaction-topic: t1_demo_transactions
+    accept-topic: t1_demo_transaction_accept
+    result-topic: t1_demo_transaction_result
+
   cache:
     expiration-seconds: 200
   metric:
     limit-millis: 500
-  kafka:
-    metric-topic: t1_demo_metrics
-    error-topic: t1_demo_metrics
-
-logging:
-  level:
-    root: INFO
-    org.springframework.kafka: DEBUG
-    ваш.пакет: DEBUG

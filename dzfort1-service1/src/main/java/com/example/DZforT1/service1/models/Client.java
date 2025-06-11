@@ -13,27 +13,19 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "client", uniqueConstraints = {
-    @UniqueConstraint(name = "unique_client_id", columnNames = "client_id")
-})
+@Table(name = "client")
 public class Client {
 
-
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "first_name", nullable = false)
-    private String firstName;
-
-    @Column(name = "last_name", nullable = false)
-    private String lastName;
-
-    @Column(name = "middle_name")
-    private String middleName;
-
-    @Id
     @Column(name = "client_id", nullable = false, unique = true)
     private UUID clientId;
+
+    private String firstName;
+    private String lastName;
+    private String middleName;
 
     @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Account> accounts = new ArrayList<>();

@@ -1,6 +1,6 @@
 package com.example.DZforT1.service1.service.Impl;
 
-import com.example.DZforT1.DTO.KafkaErrorDTO;
+import com.example.DZforT1.core.DTO.KafkaErrorDTO;
 import com.example.DZforT1.service1.models.DataSourceErrorLog;
 import com.example.DZforT1.service1.service.DataSourceErrorLogService;
 import com.example.DZforT1.service1.service.ErrorLoggingService;

@@ -1,6 +1,6 @@
 package com.example.DZforT1.service1.service.Impl;
 
-import com.example.DZforT1.DTO.KafkaMetricDTO;
+import com.example.DZforT1.core.DTO.KafkaMetricDTO;
 import com.example.DZforT1.service1.service.MetricLoggingService;
 import com.example.DZforT1.service1.service.TimeLimitExcedLogService;
 import com.fasterxml.jackson.databind.ObjectMapper;

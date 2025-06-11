@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 
@@ -51,6 +52,7 @@ public class TransactionAcceptServiceImpl {
             LocalDateTime windowStart = now.minusMinutes(timeWindowMinutes);
 
             recent.removeIf(t -> t.isBefore(windowStart));
+            transactionHistory.put(key, new ArrayList<>(recent));
 
             if (recent.size() >= maxTransactions) {
                 log.warn("Превышен лимит транзакций для клиента {}", dto.clientId());
@@ -67,11 +69,10 @@ public class TransactionAcceptServiceImpl {
             sendResult(dto, TransactionStatus.ACCECPTED, "Транзакция одобрена");
 
         } catch (Exception ex) {
-            log.error("Ошибка обработки транзакции: {}", ex.getMessage());
-            sendResult(dto, TransactionStatus.REJECTED, ex.getMessage());
+            log.error("Ошибка обработки транзакции", ex);
+            sendResultOnError(dto, ex);
         }
     }
-
 
     private void sendResult(TransactionAcceptDTO dto, TransactionStatus status, String reason) {
         try {
@@ -88,6 +89,24 @@ public class TransactionAcceptServiceImpl {
             log.info("Результат отправлен: {}", result.status());
         } catch (Exception ex) {
             log.error("Ошибка отправки результата: {}", ex.getMessage());
+        }
+    }
+
+    private void sendResultOnError(TransactionAcceptDTO dto, Exception ex) {
+        try {
+            TransactionResultDTO result = new TransactionResultDTO(
+                dto != null ? dto.transactionId() : UUID.randomUUID(),
+                dto != null ? dto.accountId() : UUID.randomUUID(),
+                dto != null ? dto.clientId() : UUID.randomUUID(),
+                TransactionStatus.REJECTED,
+                LocalDateTime.now()
+            );
+
+            String json = objectMapper.writeValueAsString(result);
+            kafkaTemplate.send(resultTopic, json);
+            log.warn("Отправлен generic результат из-за ошибки: {}", ex.getMessage());
+        } catch (Exception innerEx) {
+            log.error("Ошибка отправки generic результата: {}", innerEx.getMessage());
         }
     }
 }
