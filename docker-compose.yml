@@ -30,7 +30,6 @@ services:
       KAFKA_CFG_LISTENERS: PLAINTEXT://:9092
       KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
 
-      # Создание топиков при старте
       KAFKA_CREATE_TOPICS: |
         t1_demo_transactions:1:1,
         t1_demo_transaction_accept:1:1,

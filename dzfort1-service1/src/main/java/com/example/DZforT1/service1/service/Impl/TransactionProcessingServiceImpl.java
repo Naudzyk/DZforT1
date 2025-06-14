@@ -56,7 +56,7 @@ public class TransactionProcessingServiceImpl implements TransactionProcesingSer
             }
 
             Account account = accountOpt.get();
-
+            UUID clientId = dto.clientId() != null ? dto.clientId() : account.getClientId();
             if (account.getStatus() != AccountStatus.OPEN) {
                 log.warn("Аккаунт заблокирован: {}", account.getAccountId());
                 sendToResultTopic(dto, TransactionStatus.BLOCKED, "Account is not OPEN");
@@ -64,10 +64,10 @@ public class TransactionProcessingServiceImpl implements TransactionProcesingSer
             }
 
             Transaction transaction = new Transaction();
-            transaction.setClientId(dto.clientId());
+            transaction.setClientId(clientId);
             transaction.setAccountId(dto.accountId());
             transaction.setAmount(dto.amount());
-            transaction.setTimestamp(dto.timestamp());
+            transaction.setTimestamp(dto.timestamp() != null ? dto.timestamp() : LocalDateTime.now());
             transaction.setStatus(TransactionStatus.REQUESTED);
 
             transaction = transactionRepository.save(transaction);
