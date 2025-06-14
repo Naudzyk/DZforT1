@@ -11,6 +11,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,47 +41,63 @@ public class TransactionAcceptServiceImpl {
 
     @KafkaListener(topics = "${app.kafka.accept-topic}", groupId = "accept-group")
     public void handleAccept(String message) {
-    TransactionAcceptDTO dto = null;
-    try {
-        dto = objectMapper.readValue(message, TransactionAcceptDTO.class);
-        log.info("Получена транзакция для проверки: {}", dto);
+        TransactionAcceptDTO dto = null;
+        try {
+            dto = objectMapper.readValue(message, TransactionAcceptDTO.class);
+            log.info("Получена транзакция для проверки: {}", dto);
 
-        // Проверка обязательных полей
-        if (dto.clientId() == null || dto.accountId() == null || dto.timestamp() == null) {
-            log.warn("Транзакция содержит null-поля: {}", dto);
-            sendResultOnError(dto, new IllegalArgumentException("clientId, accountId или timestamp равен null"));
-            return;
-        }
+            // Проверка обязательных полей
+            if (dto.clientId() == null || dto.accountId() == null || dto.timestamp() == null) {
+                log.warn("Транзакция содержит null-поля: {}", dto);
+                sendResultOnError(dto, new IllegalArgumentException("clientId, accountId или timestamp равен null"));
+                return;
+            }
 
-        String key = dto.clientId() + "_" + dto.accountId();
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime windowStart = now.minusMinutes(timeWindowMinutes);
+            // Проверка суммы транзакции
+            if (dto.amount().compareTo(BigDecimal.ZERO) == 0) {
+                log.warn("Транзакция с нулевой суммой: {}", dto.transactionId());
+                sendResult(dto, TransactionStatus.REJECTED, "Сумма транзакции не может быть нулевой");
+                return;
+            }
 
-        // Получаем или создаем список транзакций для ключа
-        List<LocalDateTime> recent = transactionHistory.computeIfAbsent(key, k -> new ArrayList<>());
+            String key = dto.clientId() + "_" + dto.accountId();
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime windowStart = now.minusMinutes(timeWindowMinutes);
 
-        // Добавляем новую транзакцию
-        recent.add(dto.timestamp());
+            // Получаем или создаем список транзакций для пары clientId_accountId
+            List<LocalDateTime> recent = transactionHistory.computeIfAbsent(key, k -> new ArrayList<>());
 
-        // Удаляем старые транзакции за пределами окна
-        recent.removeIf(t -> t.isBefore(windowStart));
+            // Удаляем транзакции за пределами окна
+            recent.removeIf(t -> t.isBefore(windowStart));
 
-        // Проверяем лимит транзакций
-        if (recent.size() > maxTransactions) {
-            log.warn("Превышен лимит транзакций для клиента {} и аккаунта {}", dto.clientId(), dto.accountId());
-            sendResult(dto, TransactionStatus.BLOCKED, "Превышен лимит транзакций");
-            return;
-        }
+            // Добавляем текущую транзакцию
+            recent.add(dto.timestamp());
+            transactionHistory.put(key, recent);
 
-        // Проверяем баланс
-        if (dto.amount().compareTo(dto.accountBalance()) > 0) {
-            log.warn("Недостаточно средств для транзакции {}", dto.transactionId());
-            sendResult(dto, TransactionStatus.REJECTED, "Недостаточно средств");
-            return;
-        }
+            // Проверяем лимит транзакций
+            if (recent.size() > maxTransactions) {
+                log.warn("Превышен лимит транзакций для клиента {} и аккаунта {}", dto.clientId(), dto.accountId());
+                sendResult(dto, TransactionStatus.BLOCKED, "Превышен лимит транзакций");
+                return;
+            }
 
-        // Транзакция одобрена
-        sendResult(dto, TransactionStatus.ACCECPTED, "Транзакция одобрена");
+            // Проверяем, что баланс не стал отрицательным (указывает на ошибку в сервисе 1)
+            if (dto.accountBalance().compareTo(BigDecimal.ZERO) < 0) {
+                log.warn("Отрицательный баланс для транзакции {}", dto.transactionId());
+                sendResult(dto, TransactionStatus.REJECTED, "Баланс аккаунта отрицательный");
+                return;
+            }
+
+            // Проверяем, что сумма списания не превышает баланса
+            BigDecimal originalBalance = dto.accountBalance().add(dto.amount()); // Баланс до транзакции
+                    if (dto.amount().compareTo(BigDecimal.ZERO) < 0 && originalBalance.compareTo(BigDecimal.ZERO) < 0) {
+                        log.warn("Недостаточно средств для транзакции {}", dto.transactionId());
+                        sendResult(dto, TransactionStatus.REJECTED, "Недостаточно средств");
+                        return;
+                    }
+
+            // Транзакция одобрена
+            sendResult(dto, TransactionStatus.ACCECPTED, "Транзакция одобрена");
 
         } catch (Exception ex) {
             log.error("Ошибка обработки транзакции", ex);
