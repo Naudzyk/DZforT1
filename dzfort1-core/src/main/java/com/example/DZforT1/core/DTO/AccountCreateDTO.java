@@ -1,5 +1,6 @@
 package com.example.DZforT1.core.DTO;
 
+import com.example.DZforT1.core.ENUM.AccountStatus;
 import com.example.DZforT1.core.ENUM.AccountType;
 
 import java.math.BigDecimal;
@@ -10,4 +11,10 @@ public record AccountCreateDTO(
         AccountType accountType,
         BigDecimal balance
 
-) {}
+) {
+    public AccountCreateDTO {
+        if (balance == null) {
+            balance = BigDecimal.ZERO;
+        }
+    }
+}

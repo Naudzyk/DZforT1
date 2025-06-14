@@ -10,6 +10,6 @@ import java.util.UUID;
 public interface TransactionService {
     List<TransactionResponseDTO> getTransactions();
     TransactionResponseDTO getTransaction(UUID id);
-    TransactionResponseDTO addTransaction(TransactionCreateDTO transactionCreateDTO);
+//    TransactionResponseDTO addTransaction(TransactionCreateDTO transactionCreateDTO);
 
 }

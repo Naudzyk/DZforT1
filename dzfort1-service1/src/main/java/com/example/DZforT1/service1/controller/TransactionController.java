@@ -1,6 +1,7 @@
 package com.example.DZforT1.service1.controller;
 
 import com.example.DZforT1.core.DTO.TransactionCreateDTO;
+import com.example.DZforT1.core.DTO.TransactionRequestDTO;
 import com.example.DZforT1.core.DTO.TransactionResponseDTO;
 import com.example.DZforT1.service1.service.TransactionProcesingService;
 import com.example.DZforT1.service1.service.TransactionService;
@@ -32,7 +33,7 @@ public class TransactionController {
      * Отправляет транзакцию в Kafka для асинхронной обработки
      */
     @PostMapping
-    public ResponseEntity<String> createTransaction(@RequestBody TransactionCreateDTO dto) {
+    public ResponseEntity<String> createTransaction(@RequestBody TransactionRequestDTO dto) {
         try {
             // Преобразуем DTO в JSON и отправляем в Kafka
             String json = objectMapper.writeValueAsString(dto);

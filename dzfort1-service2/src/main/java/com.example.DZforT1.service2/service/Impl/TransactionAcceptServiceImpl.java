@@ -40,33 +40,47 @@ public class TransactionAcceptServiceImpl {
 
     @KafkaListener(topics = "${app.kafka.accept-topic}", groupId = "accept-group")
     public void handleAccept(String message) {
-        TransactionAcceptDTO dto = null;
-        try {
-            dto = objectMapper.readValue(message, TransactionAcceptDTO.class);
-            log.info("Получена транзакция для проверки: {}", dto);
+    TransactionAcceptDTO dto = null;
+    try {
+        dto = objectMapper.readValue(message, TransactionAcceptDTO.class);
+        log.info("Получена транзакция для проверки: {}", dto);
 
-            String key = dto.clientId() + "_" + dto.accountId();
+        // Проверка обязательных полей
+        if (dto.clientId() == null || dto.accountId() == null || dto.timestamp() == null) {
+            log.warn("Транзакция содержит null-поля: {}", dto);
+            sendResultOnError(dto, new IllegalArgumentException("clientId, accountId или timestamp равен null"));
+            return;
+        }
 
-            List<LocalDateTime> recent = transactionHistory.getOrDefault(key, new ArrayList<>());
-            LocalDateTime now = LocalDateTime.now();
-            LocalDateTime windowStart = now.minusMinutes(timeWindowMinutes);
+        String key = dto.clientId() + "_" + dto.accountId();
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime windowStart = now.minusMinutes(timeWindowMinutes);
 
-            recent.removeIf(t -> t.isBefore(windowStart));
-            transactionHistory.put(key, new ArrayList<>(recent));
+        // Получаем или создаем список транзакций для ключа
+        List<LocalDateTime> recent = transactionHistory.computeIfAbsent(key, k -> new ArrayList<>());
 
-            if (recent.size() >= maxTransactions) {
-                log.warn("Превышен лимит транзакций для клиента {}", dto.clientId());
-                sendResult(dto, TransactionStatus.BLOCKED, "Превышен лимит транзакций");
-                return;
-            }
+        // Добавляем новую транзакцию
+        recent.add(dto.timestamp());
 
-            if (dto.amount().compareTo(dto.accountBalance()) > 0) {
-                log.warn("Недостаточно средств для транзакции {}", dto.transactionId());
-                sendResult(dto, TransactionStatus.REJECTED, "Недостаточно средств");
-                return;
-            }
+        // Удаляем старые транзакции за пределами окна
+        recent.removeIf(t -> t.isBefore(windowStart));
 
-            sendResult(dto, TransactionStatus.ACCECPTED, "Транзакция одобрена");
+        // Проверяем лимит транзакций
+        if (recent.size() > maxTransactions) {
+            log.warn("Превышен лимит транзакций для клиента {} и аккаунта {}", dto.clientId(), dto.accountId());
+            sendResult(dto, TransactionStatus.BLOCKED, "Превышен лимит транзакций");
+            return;
+        }
+
+        // Проверяем баланс
+        if (dto.amount().compareTo(dto.accountBalance()) > 0) {
+            log.warn("Недостаточно средств для транзакции {}", dto.transactionId());
+            sendResult(dto, TransactionStatus.REJECTED, "Недостаточно средств");
+            return;
+        }
+
+        // Транзакция одобрена
+        sendResult(dto, TransactionStatus.ACCECPTED, "Транзакция одобрена");
 
         } catch (Exception ex) {
             log.error("Ошибка обработки транзакции", ex);

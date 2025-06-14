@@ -54,22 +54,22 @@ public class TransactionServiceImpl implements TransactionService {
     /**
      * Создать новую транзакцию
      */
-    @Override
-    @Transactional
-    @LogDataSourceError
-    public TransactionResponseDTO addTransaction(TransactionCreateDTO dto) {
-        Account account = accountRepository.findByAccountId(dto.accountId())
-                .orElseThrow(() -> new RuntimeException("Account not found"));
-
-        Transaction transaction = new Transaction();
-        transaction.setAccount(account);
-        transaction.setAmount(dto.amount());
-        transaction.setTimestamp(dto.time());
-
-        Transaction saved = transactionRepository.save(transaction);
-
-        return convertToDto(saved);
-    }
+//    @Override
+//    @Transactional
+//    @LogDataSourceError
+//    public TransactionResponseDTO addTransaction(TransactionCreateDTO dto) {
+//        Account account = accountRepository.findByAccountId(dto.accountId())
+//                .orElseThrow(() -> new RuntimeException("Account not found"));
+//
+//        Transaction transaction = new Transaction();
+//        transaction.setAccount(account);
+//        transaction.setAmount(dto.amount());
+//        transaction.setTimestamp(dto.time());
+//
+//        Transaction saved = transactionRepository.save(transaction);
+//
+//        return convertToDto(saved);
+//    }
 
 
     private TransactionResponseDTO convertToDto(Transaction transaction) {

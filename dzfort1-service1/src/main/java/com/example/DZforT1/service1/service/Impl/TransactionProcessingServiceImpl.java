@@ -67,7 +67,7 @@ public class TransactionProcessingServiceImpl implements TransactionProcesingSer
             transaction.setClientId(clientId);
             transaction.setAccountId(dto.accountId());
             transaction.setAmount(dto.amount());
-            transaction.setTimestamp(dto.timestamp() != null ? dto.timestamp() : LocalDateTime.now());
+            transaction.setTimestamp(LocalDateTime.now());
             transaction.setStatus(TransactionStatus.REQUESTED);
 
             transaction = transactionRepository.save(transaction);
@@ -78,12 +78,13 @@ public class TransactionProcessingServiceImpl implements TransactionProcesingSer
             log.info("Баланс аккаунта обновлён: {}", account.getAccountId());
 
             TransactionAcceptDTO acceptDTO = new TransactionAcceptDTO(
-                dto.clientId(),
-                dto.accountId(),
+                    transaction.getClientId(),
+                transaction.getAccountId(),
                 transaction.getTransactionId(),
-                dto.timestamp(),
+                transaction.getTimestamp(),
                 dto.amount(),
                 account.getBalance()
+
             );
 
             String acceptJson = objectMapper.writeValueAsString(acceptDTO);
