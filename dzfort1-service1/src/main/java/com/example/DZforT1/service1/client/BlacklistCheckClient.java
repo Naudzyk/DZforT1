@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 public interface BlacklistCheckClient {
 
     @PostMapping("/check")
-    @Headers("Content-Type: application/json")
     ResponseEntity<BlacklistResponseDTO> checkClient(
         @RequestHeader("Authorization") String auth,
         @RequestBody BlacklistRequestDTO dto

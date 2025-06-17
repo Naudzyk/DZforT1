@@ -102,6 +102,7 @@ public class ClientServiceImpl implements ClientService {
             client.getFirstName(),
             client.getLastName(),
             client.getMiddleName(),
+            client.getStatus(),
             accountDTOS,
             client.getClientId()
         );

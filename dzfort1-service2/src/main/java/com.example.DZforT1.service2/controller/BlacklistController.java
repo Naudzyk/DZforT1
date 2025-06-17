@@ -19,9 +19,6 @@ public class BlacklistController {
 
     @PostMapping("/check")
     public ResponseEntity<BlacklistResponseDTO> checkClient(@RequestBody BlacklistRequestDTO dto) {
-        if (dto.clientId() == null || dto.accountId() == null) {
-        return ResponseEntity.badRequest().build();
-        }
         boolean isBlacklisted = blacklistService.isClientBlacklisted(dto.clientId(), dto.accountId());
         return ResponseEntity.ok(new BlacklistResponseDTO(dto.clientId(), dto.accountId(), isBlacklisted));
     }

@@ -42,7 +42,7 @@ app:
   transaction:
     max-rejected-transactions: 5
   jwt:
-    secret: mySecretKey
+    secret: mySecureSecretKeyThatIsLongEnoughForHS512
 
   cache:
     expiration-seconds: 200

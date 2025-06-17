@@ -24,6 +24,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -51,6 +52,9 @@ public class TransactionProcessingServiceImpl implements TransactionProcesingSer
     @Value("${app.transaction.max-rejected-transactions}")
     private int maxRejectedTransactions;
 
+    @Value("${app.kafka.transaction-topic}")
+    private String transactionTopic;
+
     @Transactional
     @KafkaListener(topics = "${app.kafka.transaction-topic}", groupId = "transaction-group")
     public void processTransaction(String message) {
@@ -58,17 +62,39 @@ public class TransactionProcessingServiceImpl implements TransactionProcesingSer
             TransactionRequestDTO dto = objectMapper.readValue(message, TransactionRequestDTO.class);
             log.info("Получена транзакция: {}", dto);
 
+            // Проверка, что accountId передан
+            if (dto.accountId() == null) {
+                log.warn("accountId равен null");
+                sendToResultTopic(dto, TransactionStatus.REJECTED, "accountId равен null");
+                return;
+            }
+
+            // Получение аккаунта
             Optional<Account> accountOpt = accountRepository.findByAccountId(dto.accountId());
             if (accountOpt.isEmpty()) {
-                sendToResultTopic(dto, TransactionStatus.REJECTED, "Account not found");
+                log.warn("Аккаунт не найден: {}", dto.accountId());
+                sendToResultTopic(dto, TransactionStatus.REJECTED, "Аккаунт не найден");
                 return;
             }
 
             Account account = accountOpt.get();
             Client client = account.getClient();
 
+            // Проверка, что клиент существует
+            if (client == null) {
+                log.warn("Клиент не найден для аккаунта: {}", account.getAccountId());
+                sendToResultTopic(dto, TransactionStatus.REJECTED, "Клиент не найден");
+                return;
+            }
+
+            // Проверка, что клиент заблокирован
+            if (client.getStatus() == ClientStatus.BLOCKED) {
+                sendToResultTopic(dto, TransactionStatus.REJECTED, "Клиент заблокирован");
+                return;
+            }
+
+            // Проверка статуса клиента
             if (client.getStatus() == ClientStatus.UNKNOWN) {
-                log.info("Статус клиента неизвестен. Отправляем запрос в сервис 2...");
                 String token = "Bearer " + jwtService.generateToken();
                 BlacklistRequestDTO request = new BlacklistRequestDTO(dto.clientId(), dto.accountId());
                 ResponseEntity<BlacklistResponseDTO> response = blacklistCheckClient.checkClient(token, request);
@@ -88,9 +114,10 @@ public class TransactionProcessingServiceImpl implements TransactionProcesingSer
                 }
             }
 
+            // Создание транзакции
             Transaction transaction = new Transaction();
-            transaction.setClientId(dto.clientId());
-            transaction.setAccountId(dto.accountId());
+            transaction.setClientId(dto.clientId() != null ? dto.clientId() : account.getClientId());
+            transaction.setAccountId(dto.accountId() != null ? dto.accountId() : account.getAccountId());
             transaction.setAmount(dto.amount());
             transaction.setTimestamp(dto.timestamp() != null ? dto.timestamp() : LocalDateTime.now());
             transaction.setStatus(TransactionStatus.REQUESTED);
@@ -100,9 +127,17 @@ public class TransactionProcessingServiceImpl implements TransactionProcesingSer
             account.setBalance(account.getBalance().add(dto.amount()));
             accountRepository.save(account);
 
+            // Проверка, что баланс не стал отрицательным
+            if (account.getBalance().compareTo(BigDecimal.ZERO) < 0) {
+                log.warn("Отрицательный баланс для транзакции {}", dto.transactionId());
+                sendToResultTopic(dto, TransactionStatus.REJECTED, "Баланс аккаунта отрицательный");
+                return;
+            }
+
+            // Отправка в accept-топик
             TransactionAcceptDTO acceptDTO = new TransactionAcceptDTO(
-                dto.clientId(),
-                dto.accountId(),
+                transaction.getClientId(),
+                transaction.getAccountId(),
                 transaction.getTransactionId(),
                 transaction.getTimestamp(),
                 dto.amount(),
@@ -112,35 +147,49 @@ public class TransactionProcessingServiceImpl implements TransactionProcesingSer
             String json = objectMapper.writeValueAsString(acceptDTO);
             kafkaTemplate.send(acceptTopic, json);
 
+            // Проверка количества REJECTED транзакций
+            UUID clientId = account.getClientId();
+            int rejectedCount = transactionRepository.countByClientIdAndStatus(clientId, TransactionStatus.REJECTED);
+
+            if (rejectedCount >= maxRejectedTransactions) {
+                log.warn("Превышен лимит REJECTED транзакций для клиента: {}", clientId);
+                account.setStatus(AccountStatus.ARRESTED);
+                accountRepository.save(account);
+            }
+
         } catch (Exception ex) {
             log.error("Ошибка обработки транзакции", ex);
             sendToResultTopicOnError(message, ex);
         }
     }
+
     @Transactional
     public void blockClientAndAccount(TransactionRequestDTO dto, Account account) {
-       Optional<Client> clientOpt = clientRepository.findByClientId(dto.clientId());
+        if (dto.clientId() == null || account == null) {
+            log.warn("Не удалось заблокировать клиента: clientId или аккаунт равен null");
+            return;
+        }
+
+        Optional<Client> clientOpt = clientRepository.findByClientId(dto.clientId());
         if (clientOpt.isPresent()) {
             Client client = clientOpt.get();
             client.setStatus(ClientStatus.BLOCKED);
             clientRepository.save(client);
 
             List<Account> accounts = client.getAccounts();
-            for (Account ac : accounts) {
-                if (accounts != null) {
+            if (accounts != null && !accounts.isEmpty()) {
+                accounts.forEach(ac -> {
                     ac.setStatus(AccountStatus.BLOCKED);
-                    accountRepository.save(account);
-                }
+                    accountRepository.save(ac);
+                });
             }
         }
     }
 
-
-
-    private void sendToResultTopic(TransactionRequestDTO dto, TransactionStatus status,String reason) {
+    private void sendToResultTopic(TransactionRequestDTO dto, TransactionStatus status, String reason) {
         try {
             TransactionResultDTO result = new TransactionResultDTO(
-                dto.transactionId(),
+                dto.transactionId() != null ? dto.transactionId() : UUID.randomUUID(),
                 dto.accountId(),
                 dto.clientId(),
                 status,
@@ -150,6 +199,7 @@ public class TransactionProcessingServiceImpl implements TransactionProcesingSer
             String json = objectMapper.writeValueAsString(result);
             kafkaTemplate.send(resultTopic, json);
             log.info("Отправлен результат транзакции: {}", status);
+
         } catch (Exception ex) {
             log.error("Ошибка отправки в result-топик: {}", ex.getMessage());
         }
@@ -178,6 +228,7 @@ public class TransactionProcessingServiceImpl implements TransactionProcesingSer
             String json = objectMapper.writeValueAsString(result);
             kafkaTemplate.send(resultTopic, json);
             log.warn("Отправлен generic результат из-за ошибки: {}", ex.getMessage());
+
         } catch (Exception innerEx) {
             log.error("Ошибка отправки generic результата: {}", innerEx.getMessage());
         }

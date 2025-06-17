@@ -16,7 +16,7 @@ app:
     accept-topic: t1_demo_transaction_accept
     result-topic: t1_demo_transaction_result
   jwt:
-    secret: mySecretKey
+    secret: mySecureSecretKeyThatIsLongEnoughForHS512
 
   transaction:
     max-transactions: 5

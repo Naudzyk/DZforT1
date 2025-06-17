@@ -12,7 +12,6 @@ public class FeignConfig {
     @Bean
     public RequestInterceptor requestInterceptor(JwtService jwtService) {
         return requestTemplate -> {
-            // Генерация токена
             String token = "Bearer " + jwtService.generateToken();
             requestTemplate.header("Authorization", token);
         };

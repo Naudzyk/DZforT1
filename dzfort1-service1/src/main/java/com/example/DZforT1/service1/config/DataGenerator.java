@@ -1,6 +1,7 @@
 package com.example.DZforT1.service1.config;
 
 import com.example.DZforT1.core.ENUM.AccountStatus;
+import com.example.DZforT1.core.ENUM.ClientStatus;
 import com.example.DZforT1.core.ENUM.TransactionStatus;
 import com.example.DZforT1.service1.models.Account;
 import com.example.DZforT1.core.ENUM.AccountType;
@@ -56,6 +57,7 @@ public class DataGenerator implements CommandLineRunner {
                     client.setFirstName(faker.name().firstName());
                     client.setLastName(faker.name().lastName());
                     client.setMiddleName(faker.name().nameWithMiddle());
+                    client.setStatus(ClientStatus.UNKNOWN);
                     client.setClientId(UUID.randomUUID());
                     return client;
                 })
