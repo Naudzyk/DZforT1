@@ -1,5 +1,6 @@
 package com.example.DZforT1.service1.models;
 
+import com.example.DZforT1.core.ENUM.ClientStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -26,6 +27,10 @@ public class Client {
     private String firstName;
     private String lastName;
     private String middleName;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private ClientStatus status = ClientStatus.OPEN;
 
     @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Account> accounts = new ArrayList<>();

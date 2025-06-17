@@ -1,6 +1,10 @@
 spring:
   application:
     name: dzfort1-service1
+  security:
+    user:
+      name: user
+      password: secret
   datasource:
     url: jdbc:h2:mem:testdb
     username: sa
@@ -35,8 +39,16 @@ app:
     transaction-topic: t1_demo_transactions
     accept-topic: t1_demo_transaction_accept
     result-topic: t1_demo_transaction_result
+  transaction:
+    max-rejected-transactions: 5
+  jwt:
+    secret: mySecretKey
 
   cache:
     expiration-seconds: 200
   metric:
     limit-millis: 500
+feign:
+  client:
+    config:
+      enabled: true

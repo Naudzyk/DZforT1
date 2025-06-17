@@ -1,26 +1,31 @@
 package com.example.DZforT1.service1.service.Impl;
 
 
-import com.example.DZforT1.core.DTO.TransactionAcceptDTO;
-import com.example.DZforT1.core.DTO.TransactionRequestDTO;
-import com.example.DZforT1.core.DTO.TransactionResultDTO;
+import com.example.DZforT1.core.DTO.*;
 import com.example.DZforT1.core.ENUM.AccountStatus;
+import com.example.DZforT1.core.ENUM.ClientStatus;
 import com.example.DZforT1.core.ENUM.TransactionStatus;
+import com.example.DZforT1.service1.JwtService;
+import com.example.DZforT1.service1.client.BlacklistCheckClient;
 import com.example.DZforT1.service1.models.Account;
+import com.example.DZforT1.service1.models.Client;
 import com.example.DZforT1.service1.models.Transaction;
 import com.example.DZforT1.service1.repository.AccountRepository;
+import com.example.DZforT1.service1.repository.ClientRepository;
 import com.example.DZforT1.service1.repository.TransactionRepository;
 import com.example.DZforT1.service1.service.TransactionProcesingService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -33,12 +38,18 @@ public class TransactionProcessingServiceImpl implements TransactionProcesingSer
     private final TransactionRepository transactionRepository;
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
+    private final BlacklistCheckClient blacklistCheckClient;
+    private final JwtService jwtService;
+    private final ClientRepository clientRepository;
 
     @Value("${app.kafka.accept-topic}")
     private String acceptTopic;
 
     @Value("${app.kafka.result-topic}")
     private String resultTopic;
+
+    @Value("${app.transaction.max-rejected-transactions}")
+    private int maxRejectedTransactions;
 
     @Transactional
     @KafkaListener(topics = "${app.kafka.transaction-topic}", groupId = "transaction-group")
@@ -48,54 +59,82 @@ public class TransactionProcessingServiceImpl implements TransactionProcesingSer
             log.info("Получена транзакция: {}", dto);
 
             Optional<Account> accountOpt = accountRepository.findByAccountId(dto.accountId());
-
             if (accountOpt.isEmpty()) {
-                log.warn("Аккаунт не найден: {}", dto.accountId());
                 sendToResultTopic(dto, TransactionStatus.REJECTED, "Account not found");
                 return;
             }
 
             Account account = accountOpt.get();
-            UUID clientId = dto.clientId() != null ? dto.clientId() : account.getClientId();
-            if (account.getStatus() != AccountStatus.OPEN) {
-                log.warn("Аккаунт заблокирован: {}", account.getAccountId());
-                sendToResultTopic(dto, TransactionStatus.BLOCKED, "Account is not OPEN");
-                return;
+            Client client = account.getClient();
+
+            if (client.getStatus() == ClientStatus.UNKNOWN) {
+                log.info("Статус клиента неизвестен. Отправляем запрос в сервис 2...");
+                String token = "Bearer " + jwtService.generateToken();
+                BlacklistRequestDTO request = new BlacklistRequestDTO(dto.clientId(), dto.accountId());
+                ResponseEntity<BlacklistResponseDTO> response = blacklistCheckClient.checkClient(token, request);
+
+                if (response.getStatusCode().isError()) {
+                    log.warn("Ошибка проверки черного списка: {}", response.getStatusCode());
+                    sendToResultTopic(dto, TransactionStatus.REJECTED, "Не удалось проверить статус клиента");
+                    return;
+                }
+
+                BlacklistResponseDTO blacklistResponse = response.getBody();
+                if (blacklistResponse != null && blacklistResponse.isBlacklisted()) {
+                    log.warn("Клиент {} в черном списке", dto.clientId());
+                    blockClientAndAccount(dto, account);
+                    sendToResultTopic(dto, TransactionStatus.REJECTED, "Клиент в черном списке");
+                    return;
+                }
             }
 
             Transaction transaction = new Transaction();
-            transaction.setClientId(clientId);
+            transaction.setClientId(dto.clientId());
             transaction.setAccountId(dto.accountId());
             transaction.setAmount(dto.amount());
-            transaction.setTimestamp(LocalDateTime.now());
+            transaction.setTimestamp(dto.timestamp() != null ? dto.timestamp() : LocalDateTime.now());
             transaction.setStatus(TransactionStatus.REQUESTED);
+            transaction.setAccount(account);
 
             transaction = transactionRepository.save(transaction);
-            log.info("Сохранена транзакция: {}", transaction.getTransactionId());
-
             account.setBalance(account.getBalance().add(dto.amount()));
             accountRepository.save(account);
-            log.info("Баланс аккаунта обновлён: {}", account.getAccountId());
 
             TransactionAcceptDTO acceptDTO = new TransactionAcceptDTO(
-                    transaction.getClientId(),
-                transaction.getAccountId(),
+                dto.clientId(),
+                dto.accountId(),
                 transaction.getTransactionId(),
                 transaction.getTimestamp(),
                 dto.amount(),
                 account.getBalance()
-
             );
 
-            String acceptJson = objectMapper.writeValueAsString(acceptDTO);
-            kafkaTemplate.send(acceptTopic, acceptJson);
-            log.info("Отправлено в accept-топик: {}", acceptDTO.transactionId());
+            String json = objectMapper.writeValueAsString(acceptDTO);
+            kafkaTemplate.send(acceptTopic, json);
 
         } catch (Exception ex) {
-            log.error("Ошибка обработки транзакции: {}", ex.getMessage(), ex);
+            log.error("Ошибка обработки транзакции", ex);
             sendToResultTopicOnError(message, ex);
         }
     }
+    @Transactional
+    public void blockClientAndAccount(TransactionRequestDTO dto, Account account) {
+       Optional<Client> clientOpt = clientRepository.findByClientId(dto.clientId());
+        if (clientOpt.isPresent()) {
+            Client client = clientOpt.get();
+            client.setStatus(ClientStatus.BLOCKED);
+            clientRepository.save(client);
+
+            List<Account> accounts = client.getAccounts();
+            for (Account ac : accounts) {
+                if (accounts != null) {
+                    ac.setStatus(AccountStatus.BLOCKED);
+                    accountRepository.save(account);
+                }
+            }
+        }
+    }
+
 
 
     private void sendToResultTopic(TransactionRequestDTO dto, TransactionStatus status,String reason) {
