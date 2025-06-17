@@ -57,7 +57,7 @@ public class DataGenerator implements CommandLineRunner {
                     client.setFirstName(faker.name().firstName());
                     client.setLastName(faker.name().lastName());
                     client.setMiddleName(faker.name().nameWithMiddle());
-                    client.setStatus(ClientStatus.UNKNOWN);
+                    client.setStatus(random.nextBoolean() ? ClientStatus.OPEN : ClientStatus.UNKNOWN);
                     client.setClientId(UUID.randomUUID());
                     return client;
                 })
