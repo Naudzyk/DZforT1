@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: dzfort1-service2
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: accept-group
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+app:
+  kafka:
+    accept-topic: t1_demo_transaction_accept
+    result-topic: t1_demo_transaction_result
+  jwt:
+    secret: mySecureSecretKeyThatIsLongEnoughForHS512
+
+  transaction:
+    max-transactions: 5
+    time-window-minutes: 10
+    max-rejected-transactions: 5
+
+server:
+  port: 8081

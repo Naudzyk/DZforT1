@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: dzfort1-service1
+  security:
+    user:
+      name: user
+      password: secret
+  datasource:
+    url: jdbc:h2:mem:testdb
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        type:
+          override:
+            frozen_amount: DECIMAL(19,2)
+    open-in-view: false
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+app:
+  kafka:
+    metric-topic: t1_demo_metrics
+    error-topic: t1_demo_transaction_errors
+    transaction-topic: t1_demo_transactions
+    accept-topic: t1_demo_transaction_accept
+    result-topic: t1_demo_transaction_result
+  transaction:
+    max-rejected-transactions: 5
+  jwt:
+    secret: mySecureSecretKeyThatIsLongEnoughForHS512
+
+  cache:
+    expiration-seconds: 200
+  metric:
+    limit-millis: 500
+feign:
+  client:
+    config:
+      enabled: true
